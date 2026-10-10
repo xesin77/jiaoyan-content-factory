@@ -256,7 +256,7 @@ function getCfg(){
 }
 function setCfg(c){ localStorage.setItem(LS_CFG, JSON.stringify(c)); refreshStatus(); }
 
-/* 后端代理探测：通过 server.js 访问时自动启用（Key 在服务端，浏览器不接触） */
+/* 后端代理探测：站点部署 Vercel /api 代理时自动启用（Key 在服务端，浏览器不接触） */
 let PROXY=null;
 async function detectProxy(){
   if(location.protocol==='file:')return;
@@ -340,7 +340,7 @@ document.getElementById('testCfg').onclick=async ()=>{
 };
 
 /* ================= LLM 调用 ================= */
-/* 代理模式：流式请求本地 server.js 的 /api/chat（响应格式与服务商 SSE 一致） */
+/* 代理模式：流式请求站点 /api/chat（Vercel Serverless 代理，响应格式与服务商 SSE 一致） */
 async function chatStreamProxy(messages, onDelta){
   const res=await fetch('/api/chat',{
     method:'POST',
