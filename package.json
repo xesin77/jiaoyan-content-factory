@@ -1,10 +1,9 @@
 {
   "name": "jiaoyan-content-factory",
   "version": "1.0.0",
-  "description": "教研内容工场 Demo · 单文件前端 + 零依赖 Node 后端代理",
-  "main": "server.js",
+  "description": "教研内容工场 Demo · 静态前端 + Vercel Serverless 代理",
   "scripts": {
-    "start": "node server.js"
+    "dev": "node server.js"
   },
   "engines": {
     "node": ">=18"
