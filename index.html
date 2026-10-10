@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教研内容工场 · AIGC 教学内容生产平台 Demo v3</title>
+<style>
+  :root{
+    --bg:#f4f6fa; --card:#ffffff; --ink:#1f2937; --sub:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand2:#0ea5e9; --ok:#10b981;
+    --warn:#f59e0b; --err:#ef4444; --soft:#eef2ff; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding:28px 20px 40px}
+  .wrap{max-width:1120px;margin:0 auto}
+
+  /* ---------- 头部 ---------- */
+  header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex:none;box-shadow:0 4px 12px rgba(37,99,235,.25)}
+  h1{font-size:22px}
+  .tag{display:inline-block;font-size:12px;color:var(--brand);background:var(--soft);padding:3px 10px;border-radius:999px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--sub);font-size:13px}
+  .statusbar{display:flex;align-items:center;gap:10px;margin:10px 0 20px;flex-wrap:wrap}
+  .status{font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .status.online{color:var(--ok);border-color:var(--ok)}
+  .status.offline{color:var(--warn);border-color:var(--warn)}
+  .linkbtn{font-size:12px;color:var(--brand);background:none;border:none;cursor:pointer;text-decoration:underline}
+
+  /* ---------- 卡片与步骤 ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:18px}
+  .cardhead{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .stepnum{width:24px;height:24px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .cardhead h2{font-size:15px}
+  .cardhead .right{margin-left:auto;font-size:12px;color:var(--sub)}
+
+  /* ---------- 输入区（紧凑栅格） ---------- */
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+  @media(max-width:720px){.formgrid{grid-template-columns:1fr}}
+  label{display:block;font-size:12px;color:var(--sub);margin:8px 0 4px}
+  input,textarea,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);transition:border-color .15s}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand)}
+  textarea{resize:vertical;min-height:52px}
+  .examples{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .exbtn{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;cursor:pointer;color:var(--sub)}
+  .exbtn:hover{border-color:var(--brand);color:var(--brand)}
+
+  /* ---------- 类型 + 生成按钮 ---------- */
+  .actionbar{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
+  .types{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+  .chip{padding:8px 14px;border:1px solid var(--line);border-radius:999px;font-size:13px;cursor:pointer;background:#fff;transition:.15s;user-select:none}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 2px 8px rgba(37,99,235,.25)}
+  .btn{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:14px;font-weight:600;padding:12px 28px;border-radius:12px;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.3);transition:transform .1s}
+  .btn:hover:not(:disabled){transform:translateY(-1px)}
+  .btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+  .btn.big{min-width:230px;font-size:15px}
+  .meta{font-size:12px;color:var(--sub)}
+
+  /* ---------- 生成结果：并排版本卡片 ---------- */
+  .vergrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.vergrid{grid-template-columns:1fr}}
+  .ver{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fcfdff;display:flex;flex-direction:column;min-height:220px}
+  .ver .vhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+  .vtag{font-size:11px;background:var(--soft);color:var(--brand);padding:3px 10px;border-radius:999px;white-space:nowrap;font-weight:600}
+  .vinfo{font-size:11px;color:var(--sub)}
+  .vbody{font-size:13px;white-space:pre-wrap;color:var(--ink);outline:none;flex:1}
+  .vbody[contenteditable="true"]{background:#fff;border-radius:8px}
+  .vbody:empty::before{content:'正在等待大模型响应…';color:#9ca3af}
+  .cursor::after{content:'▍';color:var(--brand);animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .vactions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #f1f3f7;flex-wrap:wrap}
+  .vactions button{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 12px;cursor:pointer}
+  .vactions button:hover{border-color:var(--brand);color:var(--brand)}
+  .saved{font-size:12px;color:var(--ok);margin-top:6px}
+  .err{font-size:12px;color:var(--err);margin-top:6px}
+  .res-empty{color:var(--sub);font-size:13px;border:1px dashed var(--line);border-radius:12px;padding:36px;text-align:center;grid-column:1/-1}
+
+  /* ---------- 模板库 ---------- */
+  .tplgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:820px){.tplgrid{grid-template-columns:1fr}}
+  .template{border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;background:#fcfdff}
+  .template .t-title{font-weight:600;margin-bottom:2px;cursor:pointer}
+  .template .t-title:hover{color:var(--brand)}
+  .template .t-meta{font-size:11px;color:var(--sub);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .template .t-meta .ops{flex:none}
+  .template .t-meta button{font-size:11px;border:none;background:none;cursor:pointer;color:var(--brand);margin-left:8px}
+  .template .t-meta button[data-a="del"]{color:var(--err)}
+  .template .t-body{font-size:12px;color:var(--sub);margin-top:8px;max-height:0;overflow:hidden;transition:max-height .25s;white-space:pre-wrap;border-top:1px dashed transparent}
+  .template.open .t-body{max-height:320px;overflow:auto;border-top-color:var(--line);padding-top:8px}
+  .tpl-empty{color:var(--sub);font-size:13px;border:1px dashed var(--line);border-radius:12px;padding:20px;text-align:center;grid-column:1/-1}
+
+  /* ---------- 指标 ---------- */
+  .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  @media(max-width:900px){.metrics{grid-template-columns:repeat(3,1fr)}}
+  .metric{background:var(--soft);border-radius:12px;padding:12px 8px;text-align:center}
+  .metric b{display:block;font-size:18px;color:var(--brand)}
+  .metric span{font-size:11px;color:var(--sub)}
+
+  .foot{margin-top:8px;font-size:12px;color:var(--sub);text-align:center}
+
+  /* ---------- 设置弹窗 ---------- */
+  .mask{position:fixed;inset:0;background:rgba(15,23,42,.4);display:none;align-items:center;justify-content:center;z-index:99}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:16px;padding:22px;width:430px;max-width:92vw;max-height:90vh;overflow:auto}
+  .modal h3{font-size:16px;margin-bottom:12px}
+  .modal .btn{width:100%;margin-top:10px;box-shadow:none}
+  .testres{font-size:12px;margin-top:6px}
+  .hint{font-size:12px;color:var(--sub);background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">教研</div>
+    <div>
+      <h1>教研内容工场 <span class="tag">AIGC 教学内容生产平台 · Demo v3</span></h1>
+      <div class="sub">结构化输入 → 类型选择 → 大模型多版本流式生成 → 编辑改写 → 模板沉淀复用</div>
+    </div>
+  </header>
+
+  <div class="statusbar">
+    <span class="status offline" id="status">⚪ 离线模拟模式（未配置 API Key）</span>
+    <button class="linkbtn" id="openSettings">⚙ 配置大模型</button>
+    <span class="meta" id="modelInfo"></span>
+  </div>
+
+  <!-- ①②③ 输入与生成 -->
+  <div class="card">
+    <div class="cardhead">
+      <span class="stepnum">1</span><h2>结构化输入 · 教学内容信息</h2>
+      <span class="right">一键填充：<span class="examples">
+        <button class="exbtn" data-ex="0">Scratch 少儿编程</button>
+        <button class="exbtn" data-ex="1">小学语文写作</button>
+        <button class="exbtn" data-ex="2">初中数学复习</button>
+      </span></span>
+    </div>
+
+    <div class="formgrid">
+      <div class="field">
+        <label>课程主题 / 活动</label>
+        <input id="topic" value="用 Scratch 做一个会躲避障碍的小游戏" placeholder="例如：用 Python 画分形树">
+      </div>
+      <div class="field">
+        <label>学段 / 学生年龄</label>
+        <input id="grade" value="小学 3-4 年级（8-10 岁）" placeholder="例如：初中 / 高一 / 4-6 岁">
+      </div>
+      <div class="field">
+        <label>核心知识点</label>
+        <textarea id="points" placeholder="例如：坐标、条件判断、循环、事件">坐标、条件判断、循环、事件触发</textarea>
+      </div>
+      <div class="field">
+        <label>情境 / 活动（可选）</label>
+        <input id="event" value="周末少儿编程体验课" placeholder="例如：期末复习 / 招生公开课">
+        <label>风格偏好</label>
+        <select id="style">
+          <option>活泼、有童趣</option>
+          <option>清晰、结构化</option>
+          <option>温暖、鼓励式</option>
+          <option>专业、严谨</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actionbar">
+      <div class="types" id="types">
+        <span class="chip on" data-t="教案大纲">教案大纲</span>
+        <span class="chip" data-t="课件脚本">课件脚本</span>
+        <span class="chip" data-t="分层习题">分层习题</span>
+        <span class="chip" data-t="家校沟通文案">家校沟通文案</span>
+      </div>
+      <button class="btn big" id="gen">✨ 生成候选内容</button>
+    </div>
+    <div class="meta" id="genMeta" style="margin-top:8px">优先级：后端代理（server.js）→ 浏览器直连 Key → 内置模板模拟。任一可用即可演示，永不中断。</div>
+  </div>
+
+  <!-- ④⑤ 结果 -->
+  <div class="card">
+    <div class="cardhead">
+      <span class="stepnum">2</span><h2>候选内容 · 多版本对比 / 在线编辑改写</h2>
+      <span class="right">生成后可直接在卡片内编辑</span>
+    </div>
+    <div class="vergrid" id="results">
+      <div class="res-empty">填写上方教学信息后点击「生成候选内容」，这里会并排出现两个版本的初稿，方便对比取舍。</div>
+    </div>
+  </div>
+
+  <!-- ⑧ 模板沉淀 -->
+  <div class="card">
+    <div class="cardhead">
+      <span class="stepnum">3</span><h2>模板 / 案例沉淀</h2>
+      <span class="right">localStorage 持久化，刷新不丢失 · 点击标题展开</span>
+    </div>
+    <div class="tplgrid" id="saved"></div>
+  </div>
+
+  <!-- ⑥ 指标 -->
+  <div class="card">
+    <div class="cardhead">
+      <span class="stepnum">4</span><h2>上线后核心结果指标（示例参考）</h2>
+    </div>
+    <div class="metrics">
+      <div class="metric"><b>11<small>min</small></b><span>单条内容完成时长（原 35min）</span></div>
+      <div class="metric"><b>3.1<small>条</small></b><span>单教师周均产出（原 1.8）</span></div>
+      <div class="metric"><b>58%</b><span>候选内容采用率</span></div>
+      <div class="metric"><b>39%</b><span>最终发布率</span></div>
+      <div class="metric"><b>32%</b><span>7 日重复使用率</span></div>
+      <div class="metric"><b>120<small>套</small></b><span>已沉淀学段模板</span></div>
+    </div>
+  </div>
+
+  <div class="foot">作品集 Demo v3 · 支持后端代理 / 浏览器直连两种大模型接入 · 业务域：教研 / 教师内容生产</div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <h3>⚙ 大模型配置（浏览器直连模式）</h3>
+    <label>服务商</label>
+    <select id="provider">
+      <option value="deepseek">DeepSeek（深度求索）</option>
+      <option value="kimi">Kimi（Moonshot）</option>
+      <option value="glm">智谱 GLM</option>
+      <option value="qwen">通义千问（阿里云兼容模式）</option>
+      <option value="custom">自定义（OpenAI 兼容接口）</option>
+    </select>
+    <label>API Key</label>
+    <input id="apiKey" type="password" placeholder="sk-...（仅存本机 localStorage，不上传）">
+    <div class="customOnly" style="display:none">
+      <label>接口地址（Base URL）</label>
+      <input id="baseUrl" placeholder="https://api.example.com/v1">
+      <label>模型名</label>
+      <input id="model" placeholder="模型名称">
+    </div>
+    <div id="presetInfo" class="meta"></div>
+    <button class="btn" id="saveCfg">保存配置</button>
+    <button class="btn" id="testCfg" style="background:#fff;color:var(--brand);border:1px solid var(--brand)">测试连接</button>
+    <button class="btn" id="clearCfg" style="background:#fff;color:var(--err);border:1px solid var(--err)">清除配置（回到离线模式）</button>
+    <div class="testres" id="testres"></div>
+    <div class="hint">提示：若通过 server.js 打开本页（http://localhost:3000），Key 配置在服务端 .env 中，此处无需填写。浏览器直连模式仅适合本地演示，请勿部署公网。</div>
+    <button class="linkbtn" id="closeSettings" style="margin-top:10px">关闭</button>
+  </div>
+</div>
+
+<script>
+/* ================= 大模型配置 ================= */
+const PRESETS = {
+  deepseek: { name:'DeepSeek', base:'https://api.deepseek.com', model:'deepseek-chat', site:'platform.deepseek.com' },
+  kimi:     { name:'Kimi', base:'https://api.moonshot.cn/v1', model:'moonshot-v1-8k', site:'platform.moonshot.cn' },
+  glm:      { name:'智谱 GLM', base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4-flash', site:'bigmodel.cn（glm-4-flash 免费）' },
+  qwen:     { name:'通义千问', base:'https://dashscope.aliyuncs.com/compatible-mode/v1', model:'qwen-turbo', site:'bailian.console.aliyun.com' },
+  custom:   { name:'自定义', base:'', model:'', site:'' }
+};
+const LS_CFG='jycf_cfg', LS_TPL='jycf_templates';
+
+function getCfg(){
+  try{ return JSON.parse(localStorage.getItem(LS_CFG))||null }catch(e){ return null }
+}
+function setCfg(c){ localStorage.setItem(LS_CFG, JSON.stringify(c)); refreshStatus(); }
+
+/* 后端代理探测：通过 server.js 访问时自动启用（Key 在服务端，浏览器不接触） */
+let PROXY=null;
+async function detectProxy(){
+  if(location.protocol==='file:')return;
+  try{
+    const r=await fetch('/api/health');
+    if(r.ok){ const j=await r.json(); if(j.ok&&j.configured) PROXY=j; }
+  }catch(e){}
+}
+function useProxy(){ return !!PROXY; }
+
+function refreshStatus(){
+  const s=document.getElementById('status'), info=document.getElementById('modelInfo');
+  if(useProxy()){
+    s.className='status online';
+    s.textContent='🟢 已连接大模型（后端代理）· '+PROXY.name+' / '+PROXY.model;
+    info.textContent='Key 保存在服务端，浏览器不接触';
+    return;
+  }
+  const c=getCfg();
+  if(c&&c.key){
+    s.className='status online';
+    s.textContent='🟢 已连接大模型 · '+(c.name||'')+' / '+(c.model||'');
+    info.textContent='';
+  }else{
+    s.className='status offline';
+    s.textContent='⚪ 离线模拟模式（未配置 API Key）';
+    info.textContent='配置后切换为真实大模型生成';
+  }
+}
+
+/* 设置弹窗 */
+const mask=document.getElementById('mask');
+const providerSel=document.getElementById('provider');
+function syncProviderUI(){
+  const p=providerSel.value;
+  document.querySelector('.customOnly').style.display = p==='custom'?'block':'none';
+  const pr=PRESETS[p];
+  document.getElementById('presetInfo').textContent = p==='custom'
+    ? '需为 OpenAI 兼容的 /chat/completions 接口'
+    : ('将使用：'+pr.base+' · 模型 '+pr.model+' · Key 申请：'+pr.site);
+}
+providerSel.addEventListener('change',syncProviderUI);
+document.getElementById('openSettings').onclick=()=>{
+  const c=getCfg();
+  if(c){ providerSel.value=c.provider||'deepseek'; document.getElementById('apiKey').value=c.key||'';
+    document.getElementById('baseUrl').value=c.base||''; document.getElementById('model').value=c.model||''; }
+  syncProviderUI(); mask.classList.add('show');
+};
+document.getElementById('closeSettings').onclick=()=>mask.classList.remove('show');
+mask.addEventListener('click',e=>{ if(e.target===mask) mask.classList.remove('show'); });
+
+function readCfgForm(){
+  const p=providerSel.value, pr=PRESETS[p];
+  return {
+    provider:p, name:pr.name,
+    key:document.getElementById('apiKey').value.trim(),
+    base:(p==='custom'?document.getElementById('baseUrl').value.trim():pr.base).replace(/\/+$/,''),
+    model:p==='custom'?document.getElementById('model').value.trim():pr.model
+  };
+}
+document.getElementById('saveCfg').onclick=()=>{
+  const c=readCfgForm();
+  if(!c.key){ alert('请填写 API Key'); return; }
+  if(!c.base||!c.model){ alert('自定义模式需填写接口地址和模型名'); return; }
+  setCfg(c); mask.classList.remove('show');
+};
+document.getElementById('clearCfg').onclick=()=>{
+  localStorage.removeItem(LS_CFG); refreshStatus(); mask.classList.remove('show');
+};
+document.getElementById('testCfg').onclick=async ()=>{
+  const c=readCfgForm(), r=document.getElementById('testres');
+  if(!c.key){ r.style.color='var(--err)'; r.textContent='请先填写 API Key'; return; }
+  r.style.color='var(--sub)'; r.textContent='测试中…';
+  try{
+    const t0=Date.now();
+    await chatOnce(c,[{role:'user',content:'回复"ok"两个字即可'}],5);
+    r.style.color='var(--ok)'; r.textContent='✓ 连接成功（'+(Date.now()-t0)+'ms），可以点击「保存配置」';
+  }catch(e){
+    r.style.color='var(--err)'; r.textContent='✗ 连接失败：'+e.message;
+  }
+};
+
+/* ================= LLM 调用 ================= */
+/* 代理模式：流式请求本地 server.js 的 /api/chat（响应格式与服务商 SSE 一致） */
+async function chatStreamProxy(messages, onDelta){
+  const res=await fetch('/api/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({messages})
+  });
+  if(!res.ok){
+    let msg='HTTP '+res.status;
+    try{ const j=await res.json(); msg=j.error?.message||msg }catch(e){}
+    throw new Error(msg);
+  }
+  return await readSSE(res, onDelta);
+}
+
+function readSSE(res, onDelta){
+  const reader=res.body.getReader(), dec=new TextDecoder();
+  let buf='', full='';
+  return (async()=>{
+    while(true){
+      const {done,value}=await reader.read();
+      if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n'); buf=lines.pop();
+      for(const line of lines){
+        const s=line.trim();
+        if(!s.startsWith('data:')) continue;
+        const d=s.slice(5).trim();
+        if(d==='[DONE]') return full;
+        try{
+          const delta=JSON.parse(d).choices?.[0]?.delta?.content;
+          if(delta){ full+=delta; onDelta(full); }
+        }catch(e){}
+      }
+    }
+    return full;
+  })();
+}
+
+async function chatOnce(cfg, messages, maxTokens){
+  const res=await fetch(cfg.base+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+    body:JSON.stringify({model:cfg.model,messages,stream:false,max_tokens:maxTokens||2000,temperature:0.8})
+  });
+  if(!res.ok){
+    let msg='HTTP '+res.status;
+    try{ const j=await res.json(); msg=j.error?.message||msg }catch(e){}
+    throw new Error(msg);
+  }
+  const j=await res.json();
+  return j.choices?.[0]?.message?.content||'';
+}
+
+async function chatStream(cfg, messages, onDelta){
+  const res=await fetch(cfg.base+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+    body:JSON.stringify({model:cfg.model,messages,stream:true,max_tokens:2500,temperature:0.8})
+  });
+  if(!res.ok){
+    let msg='HTTP '+res.status;
+    try{ const j=await res.json(); msg=j.error?.message||msg }catch(e){}
+    throw new Error(msg);
+  }
+  return await readSSE(res, onDelta);
+}
+
+/* ================= Prompt 构造 ================= */
+const TYPE_SPEC = {
+  '教案大纲': '输出一份完整教案大纲，包含：教学目标（知识与技能/过程与方法/情感态度）、教学重难点、教学流程（分环节标注时长）、分层任务设计、板书要点。',
+  '课件脚本': '输出一份课件/微课口播脚本，按镜头编号（镜头1/镜头2…），每个镜头包含画面提示和口播词，口播词要口语化、可直接照读。',
+  '分层习题': '输出分层练习题：★基础题 2-3 道、★★进阶题 2-3 道、★★★挑战题 1-2 道，每题附参考答案或评分要点。',
+  '家校沟通文案': '输出一段发给家长的课程反馈文案，包含：本课内容概述、孩子的收获点、1 个具体的在家延伸建议、语气亲切不生硬，结尾有互动引导。'
+};
+function buildMessages(type, t, variant){
+  const sys = '你是一位资深教研专家，擅长为'+t.grade+'的学生设计教学内容。输出必须使用中文，直接给出成品内容本身，不要解释、不要客套话。格式清晰，用纯文本（可用【】和序号），不要用 Markdown 语法符号如 # 和 **。';
+  let usr = '请基于以下信息生成【'+type+'】。\n课程主题：'+t.topic+'\n学段：'+t.grade+'\n核心知识点：'+t.points+
+    (t.event?('\n情境/活动：'+t.event):'')+'\n风格要求：'+t.style+'\n'+TYPE_SPEC[type];
+  if(variant===1) usr+='\n\n这是第 2 个候选版本：请换一种切入角度或结构，与常规版本有明显差异，更精炼。';
+  if(variant===2) usr+='\n\n这是第 3 个候选版本：请更大胆创新，尝试一个不一样的活动设计或表达方式。';
+  return [{role:'system',content:sys},{role:'user',content:usr}];
+}
+
+/* ================= 离线兜底模板 ================= */
+const templates = {
+  '教案大纲': t=>`【课程主题】${t.topic}\n【适用学段】${t.grade}\n【风格】${t.style}\n\n一、教学目标\n  · 知识与技能：掌握 ${t.points}。\n  · 过程与方法：通过「做中学」完成一个小项目，理解抽象概念。\n  · 情感态度：体验创造的乐趣，敢于试错。\n\n二、教学流程（40 分钟）\n  1. 情境导入（5min）：${t.event||'用一个生活问题'}引出今天要解决的问题。\n  2. 概念讲解（10min）：用可视化方式讲清 ${t.points}。\n  3. 动手实践（18min）：分步搭建，教师巡场答疑。\n  4. 展示点评（5min）：学生演示作品，互评。\n  5. 总结延伸（2min）：今天我们学会了什么？回家可以怎样改进？\n\n三、分层任务\n  · 基础：完成示例的复刻。\n  · 进阶：在示例上增加一个功能。\n  · 挑战：自由创作并讲解思路。`,
+  '课件脚本': t=>`【微课主题】${t.topic}\n【对象】${t.grade}\n【口播风格】${t.style}\n\n镜头1（开场）：同学们好！今天我们要一起用 ${t.points} 做一个好玩的东西——${t.topic}。\n镜头2（演示）：先看老师做一遍。第一步，我们先把舞台搭好…\n镜头3（讲解）：${t.points} 听起来难，其实就像搭积木…\n镜头4（互动）：现在轮到你啦！${t.event?t.event+'时':''}你可以试着改一下参数，看看会发生什么？\n镜头5（总结）：今天我们学会了 ${t.points}，回家记得分享给爸爸妈妈哦！`,
+  '分层习题': t=>`【配套练习】${t.topic}（${t.grade}）\n\n★ 基础题\n1. 请写出实现「${t.topic}」需要的三个核心步骤。\n2. ${t.points.split('、')[0]} 的作用是什么？\n\n★★ 进阶题\n3. 如果要把速度调快一倍，应该修改哪个参数？为什么？\n4. 增加一个计分规则，让躲过障碍 +10 分。\n\n★★★ 挑战题\n5. 设计一个新关卡，要求用到 ${t.points} 中的至少两个知识点，并画出流程图。`,
+  '家校沟通文案': t=>`尊敬的家长，您好！\n本周${t.grade}的编程课，我们带孩子完成了《${t.topic}》。\n\n这节课孩子主要接触了：${t.points}。通过亲手做一个小游戏，孩子们把抽象的知识变成了看得见的作品，专注度和成就感都很高。\n\n${t.event?('特别说明：'+t.event+'，欢迎您来现场感受孩子的进步！\n'):''}后续我们会继续用${t.style}的方式，带孩子从「玩」到「创」。如有任何疑问，随时和我沟通～`
+};
+
+/* ================= 界面逻辑 ================= */
+const typesBox=document.getElementById('types');
+let curType='教案大纲';
+typesBox.addEventListener('click',e=>{
+  if(!e.target.classList.contains('chip'))return;
+  [...typesBox.children].forEach(c=>c.classList.remove('on'));
+  e.target.classList.add('on');
+  curType=e.target.dataset.t;
+});
+
+const EXAMPLES=[
+  {topic:'用 Scratch 做一个会躲避障碍的小游戏',grade:'小学 3-4 年级（8-10 岁）',points:'坐标、条件判断、循环、事件触发',event:'周末少儿编程体验课',style:'活泼、有童趣'},
+  {topic:'写一篇有画面感的写景作文《秋天的校园》',grade:'小学 5 年级',points:'五感观察法、比喻拟人、段落结构',event:'单元习作课',style:'温暖、鼓励式'},
+  {topic:'一元二次方程专题复习',grade:'初三（中考复习班）',points:'求根公式、判别式、韦达定理、应用题建模',event:'期中考前冲刺复习',style:'清晰、结构化'}
+];
+document.querySelectorAll('.exbtn').forEach(b=>b.onclick=()=>{
+  const e=EXAMPLES[+b.dataset.ex];
+  ['topic','grade','points','event'].forEach(k=>document.getElementById(k).value=e[k]);
+  document.getElementById('style').value=e.style;
+});
+
+function readInput(){
+  return {
+    topic:document.getElementById('topic').value||'未命名课程',
+    grade:document.getElementById('grade').value||'通用学段',
+    points:document.getElementById('points').value||'核心知识点',
+    event:document.getElementById('event').value,
+    style:document.getElementById('style').value
+  };
+}
+
+const results=document.getElementById('results');
+const genBtn=document.getElementById('gen');
+
+function makeVerCard(type, idx){
+  const el=document.createElement('div');
+  el.className='ver';
+  el.innerHTML=`<div class="vhead"><span class="vtag">${type} · 版本${idx+1}</span><span class="vinfo"></span></div>
+    <div class="vbody cursor"></div>
+    <div class="vactions">
+      <button data-act="copy">复制</button>
+      <button data-act="save">保存为模板</button>
+      <button data-act="regen">重新生成此版本</button>
+    </div>
+    <div class="saved" style="display:none">✓ 已保存到模板库</div>
+    <div class="err" style="display:none"></div>`;
+  return el;
+}
+
+async function fillVersion(el, type, t, variant){
+  const body=el.querySelector('.vbody'), info=el.querySelector('.vinfo'), err=el.querySelector('.err');
+  body.textContent=''; body.classList.add('cursor'); err.style.display='none';
+  const cfg=getCfg();
+  const t0=Date.now();
+  if(useProxy()||(cfg&&cfg.key)){
+    try{
+      const msgs=buildMessages(type,t,variant);
+      const full=useProxy()
+        ? await chatStreamProxy(msgs, f=>{ body.textContent=f; })
+        : await chatStream(cfg, msgs, f=>{ body.textContent=f; });
+      info.textContent=(useProxy()?PROXY.model:(cfg.model||'LLM'))+' · '+((Date.now()-t0)/1000).toFixed(1)+'s · 约'+full.length+'字';
+    }catch(e){
+      body.classList.remove('cursor');
+      err.style.display='block';
+      err.textContent='✗ 生成失败：'+e.message+'（可点「重新生成此版本」重试，或检查设置）';
+      info.textContent='失败';
+      return;
+    }
+  }else{
+    // 离线模式：伪流式输出
+    const text=(variant===0?templates[type](t):'【变体·'+(['更口语化','更大胆'][variant-1]||'另一种结构')+'】\n'+templates[type](t));
+    info.textContent='内置模板（离线）';
+    for(let i=0;i<text.length;i+=8){
+      body.textContent=text.slice(0,i+8);
+      await new Promise(r=>setTimeout(r,12));
+    }
+    body.textContent=text;
+  }
+  body.classList.remove('cursor');
+  body.contentEditable='true';
+}
+
+genBtn.addEventListener('click',async ()=>{
+  const t=readInput();
+  const n=2; // 默认生成 2 个版本
+  results.innerHTML='';
+  genBtn.disabled=true; genBtn.textContent='生成中…';
+  const cards=[];
+  for(let i=0;i<n;i++){ const el=makeVerCard(curType,i); results.appendChild(el); cards.push(el); bindCard(el,curType,t,i); }
+  // 并行生成
+  await Promise.all(cards.map((el,i)=>fillVersion(el,curType,t,i)));
+  genBtn.disabled=false; genBtn.textContent='✨ 生成候选内容';
+  // 生成完成后滚动到结果区
+  results.scrollIntoView({behavior:'smooth',block:'nearest'});
+});
+
+function bindCard(el,type,t,variant){
+  el.querySelector('[data-act="copy"]').onclick=e=>{
+    navigator.clipboard.writeText(el.querySelector('.vbody').innerText);
+    e.target.textContent='已复制'; setTimeout(()=>e.target.textContent='复制',1500);
+  };
+  el.querySelector('[data-act="save"]').onclick=()=>{
+    saveTemplate(type, el.querySelector('.vbody').innerText, t);
+    el.querySelector('.saved').style.display='block';
+  };
+  el.querySelector('[data-act="regen"]').onclick=()=>fillVersion(el,type,readInput(),variant);
+}
+
+/* ================= 模板库（localStorage 持久化） ================= */
+function loadTemplates(){
+  try{ return JSON.parse(localStorage.getItem(LS_TPL))||[] }catch(e){ return [] }
+}
+function saveTemplate(type, body, t){
+  const list=loadTemplates();
+  list.unshift({type, body, grade:t.grade, style:t.style, topic:t.topic, ts:Date.now()});
+  localStorage.setItem(LS_TPL, JSON.stringify(list.slice(0,50)));
+  renderTemplates();
+}
+function delTemplate(ts){
+  localStorage.setItem(LS_TPL, JSON.stringify(loadTemplates().filter(x=>x.ts!==ts)));
+  renderTemplates();
+}
+function renderTemplates(){
+  const box=document.getElementById('saved');
+  const list=loadTemplates();
+  if(!list.length){ box.innerHTML='<div class="tpl-empty">保存的优质模板会沉淀到这里，供后续复用。</div>'; return; }
+  box.innerHTML='';
+  list.forEach(x=>{
+    const d=document.createElement('div');
+    d.className='template';
+    d.innerHTML=`<div class="t-title">📄 ${x.type} · ${escapeHtml(x.topic)}</div>
+      <div class="t-meta"><span>${escapeHtml(x.grade)} · ${escapeHtml(x.style)} · ${new Date(x.ts).toLocaleString()}</span>
+      <span class="ops"><button data-a="copy">复制</button><button data-a="del">删除</button></span></div>
+      <div class="t-body">${escapeHtml(x.body)}</div>`;
+    d.querySelector('.t-title').onclick=()=>d.classList.toggle('open');
+    d.querySelector('[data-a="copy"]').onclick=e=>{ e.stopPropagation(); navigator.clipboard.writeText(x.body); e.target.textContent='已复制'; setTimeout(()=>e.target.textContent='复制',1500); };
+    d.querySelector('[data-a="del"]').onclick=()=>delTemplate(x.ts);
+    box.appendChild(d);
+  });
+}
+
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+refreshStatus();
+renderTemplates();
+detectProxy().then(refreshStatus);
+</script>
+</body>
+</html>

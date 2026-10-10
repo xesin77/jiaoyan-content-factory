@@ -1,0 +1,8 @@
+# 密钥：含真实 API Key，绝对不能提交
+.env
+.env.local
+
+# 依赖与系统文件
+node_modules/
+.DS_Store
+*.log
