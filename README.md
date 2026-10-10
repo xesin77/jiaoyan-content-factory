@@ -1,51 +1,88 @@
 # 教研内容工场 Demo
 
-单文件前端（AI 对话 demo）+ 服务端代理。后端把大模型 API Key 留在服务端（Vercel 环境变量），访客无需自己填 Key 即可对话。
+一个单文件前端（AI 对话 Demo）+ 服务端代理的作品集项目。
+后端把大模型 API Key 留在服务端（Vercel 环境变量），访客**无需自己填 Key** 即可对话。
 
-> 架构说明：本项目为 **Vercel 原生形态**——`index.html` 由 Vercel 静态托管，`/api/chat`、`/api/health` 是 Vercel Serverless 函数。
-> 不再使用 `server.listen()` 常驻服务（那套只适合 Render/Railway，在 Vercel 上会导致首页 404）。
+部署形态：**Vercel 原生** —— `index.html` 由 Vercel 静态托管，`api/` 下的文件是 Vercel Serverless 函数。
+没有 `server.js`、没有常驻 Node 服务，因此**任何设备、任何浏览器打开域名都能正常访问**。
 
-## 目录结构
+---
+
+## 目录结构（最终版，干净可推）
 
 ```
 index.html        # 前端 Demo（单文件，内联 CSS/JS），Vercel 静态托管
-api/health.js     # Serverless：健康检查，前端据此启用代理模式
-api/chat.js       # Serverless：/api/chat 代理转发 + SSE 流式输出
-server.js         # 仅本地开发用（npm run dev），线上不使用
-package.json      # dev 脚本 + Node 版本要求（>=18）
+api/
+  health.js       # Serverless：健康检查，前端据此启用代理模式
+  chat.js         # Serverless：/api/chat 代理转发 + SSE 流式输出
+package.json      # 仅元数据 + Node 版本要求（无 start 脚本，避免 Vercel 误判）
 vercel.json       # 关闭构建/安装，根目录直接托管
-.env.example      # 环境变量模板（Vercel 环境变量参考）
+.env.example      # 环境变量模板（仅作参考，真实 Key 放 Vercel）
 .gitignore        # 排除 .env，防止密钥泄露
+README.md         # 本文件
 ```
 
-## 本地运行（可选）
+> ✅ **没有任何 `server.js`**，Vercel 不会把它误判成 Node 常驻服务（这正是之前首页 404 的根因）。
+
+---
+
+## 第一步：推到 GitHub
+
+在本仓库目录执行（把 `<你的用户名>` 换成实际账号）：
 
 ```bash
-cp .env.example .env      # 编辑 .env，填入 LLM_API_KEY
-npm run dev               # 启动 server.js，打开 http://localhost:3000
+git remote add origin https://github.com/<你的用户名>/jiaoyan-content-factory.git
+git branch -M main
+git push -u origin main
 ```
 
-## 部署到 Vercel（本项目目标平台）
+（如果仓库已存在，先 `git remote -v` 确认；若是旧仓库，用 `git push --force` 覆盖。）
 
-1. 把本仓库推到 GitHub（或直接在 Vercel 导入该仓库）。
-2. 在 Vercel 导入仓库，项目设置：
-   - **Framework Preset:** Other（或留空）
-   - **Build Command:** 留空（vercel.json 已设为 null）
-   - **Install Command:** 留空
-   - **Output Directory:** `.`（根目录）
-3. 在 **Environment Variables** 里添加（**不要写进仓库**）：
-   - `LLM_PROVIDER` = `deepseek`（或 kimi / glm / qwen）
-   - `LLM_API_KEY` = 你的真实 Key
-4. Deploy。Vercel 自动分配 `*.vercel.app` 地址，并构建 `api/` 下的函数。
-5. 绑定自定义域名（如 `jiaoyan-content-factory.kira7.ltd`）：
-   - 在 Vercel 项目 → Settings → Domains 添加该域名。
-   - 按提示在 DNS 处加 CNAME 指向 `cname.vercel-dns.com`（或 Vercel 给你的记录）。
-   - 等待 SSL 自动签发（通常几分钟）。
+---
 
-> 若之前用 `server.listen()` 版本部署过，请确认本项目里 **package.json 没有 `start` 脚本**，否则 Vercel 会误判为 Node 常驻服务而再次 404。
+## 第二步：Vercel 部署（主平台）
+
+1. 打开 [vercel.com](https://vercel.com) → **Add New → Project** → 导入上面的 GitHub 仓库。
+2. 项目配置（关键，照抄即可）：
+   - **Framework Preset：** `Other`
+   - **Build Command：** 留空
+   - **Install Command：** 留空
+   - **Output Directory：** `.`（根目录）
+3. 先点 **Deploy**（先不配 Key 也能部署成功，首页照样能打开）。
+4. 部署完成后，进入项目 → **Settings → Environment Variables**，添加两条：
+   - `LLM_PROVIDER` = `deepseek`（可选 `kimi` / `glm` / `qwen`）
+   - `LLM_API_KEY` = 你的真实 Key（如 `sk-...`）
+5. 加完变量后，**必须再 Deploy 一次**（环境变量变更要重新部署才生效）。
+
+**测试：**
+- 访问分配的 `*.vercel.app` 地址，首页应正常打开。
+- 访问 `/api/health` 应返回 `{"ok":true,"configured":true,...}`（true 表示代理已生效，访客免填 Key）。
+- 若 `configured:false`：说明环境变量没设对，回去第 4 步检查。
+- 若 `/api/health` 仍 404：说明 Vercel 仍把项目当 Node 服务——确认仓库里**没有 `server.js`** 且 `package.json` 没有 `start` 脚本，然后 Redeploy。
+
+---
+
+## 第三步：换成你自己的域名（腾讯云）
+
+> 前提：你已在腾讯云（DNSPod）有一个域名，且能管理它的解析记录。
+
+1. **Vercel 侧添加域名：**
+   - 项目 → **Settings → Domains** → 输入你的域名（例如 `jiaoyan.你的域名.com` 或 `www.你的域名.com`）。
+   - Vercel 会给你一条 **CNAME 记录值**（通常是 `cname.vercel-dns.com`）。
+2. **腾讯云侧添加解析：**
+   - 登录腾讯云 → **DNS 解析 DNSPod** → 找到你的域名 → **添加记录**：
+     - 记录类型：`CNAME`
+     - 主机记录：填子域名前缀（如 `jiaoyan` 或 `www`）
+     - 记录值：`cname.vercel-dns.com`（以 Vercel 页面显示为准）
+   - 保存。
+3. **等待生效：**
+   - 几分钟到几十分钟（DNS 传播）。Vercel 的 Domains 页面会从 `Invalid Configuration` 变成 `Valid Configuration`，并**自动签发 SSL 证书**。
+4. 之后用你的域名访问即可，体验和 `*.vercel.app` 完全一致。
+
+---
 
 ## 安全说明
 
 - `.env` 已被 `.gitignore` 排除，**永远不会进仓库**。
-- 真实 Key 只存在于：你本机的 `.env` 或 Vercel 的环境变量。
-- 前端「直连模式」（访客自己填 Key、存 localStorage）在后端未配置时自动启用，两种模式互不影响。
+- 真实 Key 只存在于：Vercel 的 Environment Variables（线上）或你本机的 `.env`（仅本地测试用，本仓库不含 `.env`）。
+- 前端「直连模式」（访客自己填 Key、存 localStorage）在后端未配置时**自动启用**——所以即使你忘配 Key，网站也能打开，只是访客要自己贴 Key。两种模式互不影响，网站永不中断。

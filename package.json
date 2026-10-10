@@ -2,9 +2,7 @@
   "name": "jiaoyan-content-factory",
   "version": "1.0.0",
   "description": "教研内容工场 Demo · 静态前端 + Vercel Serverless 代理",
-  "scripts": {
-    "dev": "node server.js"
-  },
+  "private": true,
   "engines": {
     "node": ">=18"
   },
